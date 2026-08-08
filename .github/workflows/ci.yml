@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    # Changes scoped only to the example app or docs don't touch the
+    # published package, so they shouldn't run the package's test/publish
+    # pipeline. dyanet/imap doesn't do this -- its Dependabot bumps inside
+    # examples/gmail-viewer trigger the same full CI + publish-eligibility
+    # run as a real library change (see their issue #22, "example code
+    # should not trigger @dyanet/imap bump action" -- still open as of
+    # this writing). paths-ignore here is the fix for that class of noise.
+    paths-ignore:
+      - "examples/**"
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "examples/**"
+      - "docs/**"
+      - "**.md"
+
+# Cancel a run if a newer commit lands on the same branch/PR before it
+# finishes, instead of letting both run to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        # Every Node.js line still supported as of August 2026: 22
+        # (Maintenance LTS), 24 (Active LTS), 26 (Current, becomes Active
+        # LTS in October 2026). 18 and 20 are EOL and intentionally
+        # excluded -- claiming to "support" them without CI proof isn't
+        # actually supporting them. None of 22/24 have native `Temporal`
+        # by default, which is exactly what exercises the dependency-free
+        # shim in src/temporal/shim.ts; 26 exercises the native path. See
+        # docs/temporal-engine-plan.md.
+        node-version: [22, 24, 26]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage (Node 24 only)
+        if: matrix.node-version == 24
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+  # Publishing only runs off an explicit version tag (e.g. `v0.1.1`), never
+  # off every push to main. dyanet/imap's CI publishes on every push to main
+  # regardless of whether package.json's version changed, so once a version
+  # is published, the very next commit's publish step fails with
+  # "cannot publish over previously published version" (npm/GitHub Packages
+  # reject re-publishing an existing version). Tag-gating means a publish
+  # only happens when someone deliberately cuts a release (bump version,
+  # `git tag vX.Y.Z`, push the tag), which keeps main green.
+  #
+  # `needs: test` means a broken build/test run can never reach publish --
+  # closing the gap in dyanet/imap's own issue #23 ("Include tests in
+  # builds"), where a separate Docker-based build path for their example
+  # app doesn't run the main package's test suite before building.
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag v$TAG_VERSION does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

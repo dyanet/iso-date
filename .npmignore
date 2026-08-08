@@ -1,0 +1,10 @@
+src/
+tests/
+examples/
+.github/
+coverage/
+coverage-*/
+vitest.config.ts
+tsconfig.json
+*.log
+.DS_Store
