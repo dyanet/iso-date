@@ -1,0 +1,13 @@
+{
+  "name": "iso-date-example-cli",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Example CLI demonstrating @dyanet/iso-date",
+  "type": "module",
+  "scripts": {
+    "start": "node validate.mjs"
+  },
+  "dependencies": {
+    "@dyanet/iso-date": "^0.1.0"
+  }
+}

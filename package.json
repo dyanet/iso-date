@@ -1,0 +1,60 @@
+{
+  "name": "@dyanet/iso-date",
+  "version": "0.1.0",
+  "description": "Zero-dependency date utilities for TypeScript/JavaScript: everyday arithmetic/comparison (Temporal-backed) plus a strict ISO 8601 validation/parsing family",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./strict": {
+      "types": "./dist/strict.d.ts",
+      "import": "./dist/strict.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "iso8601",
+    "iso-8601",
+    "date",
+    "date-validation",
+    "date-parsing",
+    "date-arithmetic",
+    "temporal",
+    "typescript",
+    "zero-dependency",
+    "date-fns"
+  ],
+  "author": "Akber Choudhry",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dyanet/iso-date.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dyanet/iso-date/issues"
+  },
+  "homepage": "https://github.com/dyanet/iso-date#readme",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "sideEffects": false
+}
