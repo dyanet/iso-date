@@ -34,6 +34,11 @@ jobs:
     permissions:
       contents: read
     strategy:
+      # Report every Node line's real result. With the default (fail-fast:
+      # true) the first version to fail cancels the rest mid-run, so a
+      # version-specific failure hides whether the others would have passed --
+      # which is exactly the signal a version matrix exists to produce.
+      fail-fast: false
       matrix:
         # Every Node.js line still supported as of August 2026: 22
         # (Maintenance LTS), 24 (Active LTS), 26 (Current, becomes Active
@@ -68,7 +73,10 @@ jobs:
 
       - name: Upload coverage (Node 24 only)
         if: matrix.node-version == 24
-        uses: actions/upload-artifact@v4
+        # v4 still targets the Node 20 runtime, which GitHub is removing in
+        # September 2026 -- the first run of this workflow warned about
+        # exactly that. v7 is current, matching checkout/setup-node.
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/
