@@ -164,16 +164,21 @@ jobs:
     permissions:
       contents: read
       packages: write
-      id-token: write
 
     steps:
       - uses: actions/checkout@v7
 
+      # Publishes to GitHub Packages, not npmjs.com. The @dyanet scope
+      # matches the org that owns this repo, which is what GitHub Packages
+      # requires, and auth is the workflow's own GITHUB_TOKEN (via the
+      # `packages: write` permission above) -- so there is no long-lived
+      # publish token to create, store, or rotate.
       - name: Use Node.js 24
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          registry-url: "https://registry.npmjs.org"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@dyanet"
           cache: "npm"
 
       - name: Install dependencies
@@ -191,7 +196,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish to npm
-        run: npm publish --access public
+      - name: Publish to GitHub Packages
+        run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
