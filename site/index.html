@@ -1,0 +1,676 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@dyanet/iso-date — live demo</title>
+    <meta
+      name="description"
+      content="Interactive demo of @dyanet/iso-date: strict ISO 8601 validation and Temporal-backed date arithmetic, running entirely in your browser with no dependencies."
+    />
+    <!-- Dyanet logo mark, centre-cropped square from
+         DyanetDesignSystem/assets/dyanet-logo-mark.png -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./favicon.png" />
+    <style>
+      /* Colours are the Dyanet brand palette (DyanetDesignSystem/
+         colors_and_type.css) -- clay browns with an ember-orange accent,
+         matching the logo mark used as the favicon. The design system is
+         emphatic that this is "NOT a SaaS-blue product".
+
+         Typography stays on the system stack rather than the design
+         system's Space Grotesk / Inter: those load from Google Fonts, and
+         a page whose whole claim is "nothing is fetched from a server"
+         shouldn't open a connection to fonts.googleapis.com to say so. */
+      :root {
+        --bg: #f7efe7; /* clay-050  — warm paper */
+        --panel: #ffffff; /* bg-card */
+        --ink: #1a1410; /* ink-950   — near-black, warm undertone */
+        --muted: #6f5749; /* ink-600 */
+        --line: #e2d7cc; /* ink-200   — border-1 */
+        --accent: #a4541a; /* ember-800 — darker than hero ember for
+                              readable contrast on white */
+        /* One step darker than the design system's --ok (#4a8a3f): the
+           MATCH badge puts white on this at 12px bold, which needs 4.5:1
+           and the original only reaches 4.20. */
+        --ok: #458036;
+        --bad: #b33a2a; /* fail */
+        /* --ok/--bad are backgrounds for the MATCH/NO MATCH badges, so the
+           badge's own text colour has to flip with them: they're dark
+           enough for white here, and deliberately light in dark mode. */
+        --badge-ink: #ffffff;
+        --code-bg: #f1ebe4; /* ink-100   — bg-subtle */
+        --radius: 10px;
+      }
+      /* The design system defines light surfaces only; the dark ramp below
+         is derived from its own ink/clay scales rather than invented. */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1a1410; /* ink-950 */
+          --panel: #2a1f18; /* ink-900 */
+          --ink: #f7efe7; /* clay-050 */
+          --muted: #c6b6a8; /* ink-300 */
+          --line: #3d2e24; /* ink-800 */
+          --accent: #e58339; /* ember-600 — the hero orange, which only
+                                has the contrast for body text on dark */
+          --ok: #7cc46a;
+          --bad: #e8836f;
+          --badge-ink: #1a1410; /* dark ink on the lightened badge fills */
+          --code-bg: #33251c;
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      code, .mono, input, select {
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+
+      .wrap { max-width: 940px; margin: 0 auto; padding: 40px 20px 72px; }
+
+      header { margin-bottom: 32px; }
+      h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.02em; }
+      h1 code { font-size: inherit; background: none; padding: 0; }
+      .tagline { color: var(--muted); margin: 0 0 14px; max-width: 62ch; }
+      .links a {
+        color: var(--accent);
+        text-decoration: none;
+        margin-right: 16px;
+        font-size: 14px;
+      }
+      .links a:hover { text-decoration: underline; }
+
+      .engine {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .engine b { color: var(--ink); font-weight: 600; }
+      .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px;
+        margin-bottom: 22px;
+      }
+      h2 { font-size: 17px; margin: 0 0 4px; letter-spacing: -0.01em; }
+      .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; max-width: 70ch; }
+
+      label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+
+      input[type="text"], input[type="number"], select {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--bg);
+        color: var(--ink);
+        font-size: 14px;
+      }
+      input:focus, select:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: -1px;
+        border-color: transparent;
+      }
+
+      .opts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .verdict {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 18px 0 0;
+        padding: 12px 14px;
+        border-radius: 7px;
+        background: var(--code-bg);
+        font-size: 14px;
+      }
+      .verdict .badge {
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        padding: 3px 9px;
+        border-radius: 5px;
+        color: var(--badge-ink);
+        flex-shrink: 0;
+      }
+      .verdict.pass .badge { background: var(--ok); }
+      .verdict.fail .badge { background: var(--bad); }
+      .verdict .why { color: var(--muted); }
+
+      .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+
+      .out {
+        margin-top: 16px;
+        background: var(--code-bg);
+        border-radius: 7px;
+        padding: 14px;
+        font-size: 13px;
+        overflow-x: auto;
+      }
+      .out h3 {
+        margin: 0 0 9px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      table { border-collapse: collapse; width: 100%; font-size: 13px; }
+      td { padding: 3px 0; vertical-align: top; }
+      td.k { color: var(--muted); padding-right: 18px; white-space: nowrap; width: 1%; }
+      td.v { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .null { color: var(--muted); font-style: italic; }
+
+      .examples { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 7px; }
+      .examples button {
+        font: inherit;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 4px 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--bg);
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .examples button:hover { color: var(--ink); border-color: var(--accent); }
+
+      .row { display: grid; grid-template-columns: 1fr 130px 90px; gap: 12px; align-items: end; }
+      @media (max-width: 620px) { .row { grid-template-columns: 1fr; } }
+
+      .result-line {
+        margin-top: 16px;
+        padding: 13px 15px;
+        background: var(--code-bg);
+        border-radius: 7px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13.5px;
+        word-break: break-word;
+      }
+      .result-line .arrow { color: var(--muted); margin: 0 9px; }
+
+      footer {
+        margin-top: 34px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+      footer a { color: var(--accent); }
+      .err {
+        color: var(--bad);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1><code>@dyanet/iso-date</code></h1>
+        <p class="tagline">
+          Strict ISO 8601 validation plus <code>Temporal</code>-backed date
+          arithmetic — zero runtime dependencies. Everything below runs in your
+          browser against the package's real published build, loaded as plain
+          ES modules with no bundler and nothing fetched from a server.
+        </p>
+        <div class="links">
+          <a href="https://github.com/dyanet/iso-date">GitHub</a>
+          <a href="https://www.npmjs.com/package/@dyanet/iso-date">npm</a>
+          <a href="https://github.com/dyanet/iso-date#readme">Docs</a>
+        </div>
+        <div class="engine" id="engine" hidden>
+          <span class="dot"></span>
+          <span>Calendar engine: <b id="engine-name">…</b><span id="engine-note"></span></span>
+        </div>
+      </header>
+
+      <section>
+        <h2>Strict ISO 8601 — <code>@dyanet/iso-date/strict</code></h2>
+        <p class="sub">
+          <code>isISOMatch</code> accepts a string only when it matches the
+          selected ISO 8601 shape <em>and</em> every field is a real calendar
+          value. Unlike <code>Date.parse</code>, nothing is guessed, coerced, or
+          filled in.
+        </p>
+
+        <label for="iso-input">Date string</label>
+        <input
+          type="text"
+          id="iso-input"
+          spellcheck="false"
+          autocomplete="off"
+          value="2024-06-15T13:45:00Z"
+        />
+
+        <div class="examples" id="iso-examples"></div>
+
+        <div class="opts">
+          <div>
+            <label for="opt-representation">representation</label>
+            <select id="opt-representation">
+              <option value="complete">complete</option>
+              <option value="date">date</option>
+              <option value="time">time</option>
+            </select>
+          </div>
+          <div>
+            <label for="opt-format">format</label>
+            <select id="opt-format">
+              <option value="extended">extended</option>
+              <option value="basic">basic</option>
+            </select>
+          </div>
+          <div>
+            <label for="opt-dateRepresentation">dateRepresentation</label>
+            <select id="opt-dateRepresentation">
+              <option value="calendar">calendar</option>
+              <option value="ordinal">ordinal</option>
+              <option value="week">week</option>
+            </select>
+          </div>
+          <div>
+            <label for="opt-additionalDigits">additionalDigits</label>
+            <select id="opt-additionalDigits">
+              <option value="2">2</option>
+              <option value="1">1</option>
+              <option value="0">0</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="verdict" id="iso-verdict">
+          <span class="badge">—</span>
+          <span class="what mono"></span>
+          <span class="why"></span>
+        </div>
+
+        <div class="grid2">
+          <div class="out">
+            <h3>parseISOComponents()</h3>
+            <div id="components-out"></div>
+          </div>
+          <div class="out">
+            <h3>parseISOStrict() &amp; normalizeISO()</h3>
+            <div id="parse-out"></div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Arithmetic — top-level <code>core</code></h2>
+        <p class="sub">
+          Calendar-field math is delegated to <code>Temporal.PlainDate</code>,
+          so month-end overflow clamps rather than spilling: try
+          <code>addMonths</code> on <code>2023-01-31</code>. Time-of-day is
+          preserved untouched.
+        </p>
+
+        <div class="row">
+          <div>
+            <label for="arith-date">Date (any string <code>new Date()</code> accepts)</label>
+            <input type="text" id="arith-date" spellcheck="false" autocomplete="off" value="2023-01-31T09:30:00" />
+          </div>
+          <div>
+            <label for="arith-fn">function</label>
+            <select id="arith-fn">
+              <option>addDays</option>
+              <option>addWeeks</option>
+              <option selected>addMonths</option>
+              <option>addYears</option>
+              <option>subDays</option>
+              <option>subWeeks</option>
+              <option>subMonths</option>
+              <option>subYears</option>
+            </select>
+          </div>
+          <div>
+            <label for="arith-amount">amount</label>
+            <input type="number" id="arith-amount" value="1" />
+          </div>
+        </div>
+
+        <div class="result-line" id="arith-out"></div>
+      </section>
+
+      <section>
+        <h2>Comparison &amp; difference</h2>
+        <p class="sub">
+          <code>isBefore</code>/<code>isAfter</code>/<code>isEqual</code> compare
+          full instants; the <code>isSame*</code> family compares local calendar
+          fields and ignores time-of-day.
+        </p>
+
+        <div class="grid2">
+          <div>
+            <label for="cmp-a">Date A</label>
+            <input type="text" id="cmp-a" spellcheck="false" autocomplete="off" value="2024-06-01T01:00:00" />
+          </div>
+          <div>
+            <label for="cmp-b">Date B</label>
+            <input type="text" id="cmp-b" spellcheck="false" autocomplete="off" value="2024-06-01T23:00:00" />
+          </div>
+        </div>
+
+        <div class="out">
+          <div id="cmp-out"></div>
+        </div>
+      </section>
+
+      <footer>
+        <p>
+          Served as static assets from Cloudflare Workers. The page imports
+          <code>./lib/strict.js</code> and <code>./lib/index.js</code> — the
+          package's own compiled output, unmodified — directly as ES modules.
+          No bundler, no polyfill, no network calls after load.
+        </p>
+      </footer>
+    </div>
+
+    <script type="module">
+      import {
+        isISOMatch,
+        parseISOStrict,
+        parseISOComponents,
+        normalizeISO,
+      } from "./lib/strict.js";
+
+      import * as core from "./lib/index.js";
+
+      // ---- calendar engine indicator -------------------------------------
+      // The headline claim is that arithmetic rides on Temporal when the
+      // engine has it and on a dependency-free shim when it doesn't, with no
+      // behavioural difference. Say which one is actually live right now.
+      {
+        const native =
+          typeof globalThis.Temporal === "object" && globalThis.Temporal !== null;
+        document.getElementById("engine-name").textContent = native
+          ? "native Temporal.PlainDate"
+          : "internal shim";
+        document.getElementById("engine-note").textContent = native
+          ? " — this browser ships Temporal"
+          : " — this browser has no Temporal yet; same results either way";
+        document.getElementById("engine").hidden = false;
+      }
+
+      // ---- strict panel ---------------------------------------------------
+      const isoInput = document.getElementById("iso-input");
+      const verdict = document.getElementById("iso-verdict");
+      const componentsOut = document.getElementById("components-out");
+      const parseOut = document.getElementById("parse-out");
+
+      const optIds = [
+        "representation",
+        "format",
+        "dateRepresentation",
+        "additionalDigits",
+      ];
+      const optEls = Object.fromEntries(
+        optIds.map((id) => [id, document.getElementById("opt-" + id)]),
+      );
+
+      const EXAMPLES = [
+        "2024-06-15T13:45:00Z",
+        "2024-06-15T13:45:00+05:30",
+        "2024-06-15T13:45:00.123Z",
+        "2023-02-30",
+        "2024-13-01T00:00:00Z",
+        "2023-12-31T23:59:60Z",
+        "2024-W24-6",
+        "2024-167",
+        "20240615T134500Z",
+        "0000-01-01",
+      ];
+
+      // A string can fail for two very different reasons -- wrong shape, or
+      // right shape but an impossible date. Saying which is the whole point
+      // of a strict validator, so work it out rather than just "false".
+      function explainFailure(value, opts) {
+        if (value.trim() === "") return "empty input";
+        if (/\.\d+/.test(value)) return "fractional seconds aren't part of the grammar";
+        if (/:60(\D|$)/.test(value)) return "leap second :60 isn't accepted";
+
+        const relaxed = { ...opts, format: opts.format === "extended" ? "basic" : "extended" };
+        if (isISOMatch(value, relaxed))
+          return `shape is valid, but as ${relaxed.format} format, not ${opts.format}`;
+
+        for (const rep of ["complete", "date", "time"]) {
+          if (rep !== opts.representation && isISOMatch(value, { ...opts, representation: rep }))
+            return `valid as representation: "${rep}", not "${opts.representation}"`;
+        }
+        for (const dr of ["calendar", "ordinal", "week"]) {
+          if (
+            dr !== opts.dateRepresentation &&
+            isISOMatch(value, { ...opts, dateRepresentation: dr })
+          )
+            return `valid as dateRepresentation: "${dr}", not "${opts.dateRepresentation}"`;
+        }
+
+        // Shape vs. calendar validity. `parseISOComponents` returns null for
+        // both -- it rejects Feb 30 exactly as hard as it rejects "banana" --
+        // so distinguishing them needs a syntax-only probe of its own. This
+        // regex deliberately checks arrangement only, never field ranges;
+        // that is the whole distinction being drawn.
+        return looksShaped(value, opts)
+          ? "well-formed, but that isn't a real date on the calendar"
+          : "not a strict ISO 8601 string in the selected shape";
+      }
+
+      function looksShaped(value, opts) {
+        const ext = opts.format === "extended";
+        const date = {
+          calendar: ext ? String.raw`\d{4}-\d{2}-\d{2}` : String.raw`\d{8}`,
+          ordinal: ext ? String.raw`\d{4}-\d{3}` : String.raw`\d{7}`,
+          week: ext ? String.raw`\d{4}-W\d{2}(-\d)?` : String.raw`\d{4}W\d{2}\d?`,
+        }[opts.dateRepresentation];
+        const time = ext ? String.raw`\d{2}:\d{2}:\d{2}` : String.raw`\d{6}`;
+        const zone = ext
+          ? String.raw`(Z|[+-]\d{2}(:\d{2})?)?`
+          : String.raw`(Z|[+-]\d{2}(\d{2})?)?`;
+        const body = {
+          date,
+          time: time + zone,
+          complete: date + "T" + time + zone,
+        }[opts.representation];
+
+        return new RegExp("^" + body + "$").test(value.trim());
+      }
+
+      function currentOptions() {
+        return {
+          representation: optEls.representation.value,
+          format: optEls.format.value,
+          dateRepresentation: optEls.dateRepresentation.value,
+          additionalDigits: Number(optEls.additionalDigits.value),
+        };
+      }
+
+      function renderTable(target, rows) {
+        target.innerHTML =
+          "<table>" +
+          rows
+            .map(
+              ([k, v]) =>
+                `<tr><td class="k">${k}</td><td class="v">${
+                  v === null || v === undefined
+                    ? '<span class="null">—</span>'
+                    : escapeHtml(String(v))
+                }</td></tr>`,
+            )
+            .join("") +
+          "</table>";
+      }
+
+      function escapeHtml(s) {
+        return s.replace(
+          /[&<>"']/g,
+          (c) =>
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+        );
+      }
+
+      function runStrict() {
+        const value = isoInput.value;
+        const opts = currentOptions();
+        const matched = isISOMatch(value, opts);
+
+        verdict.className = "verdict " + (matched ? "pass" : "fail");
+        verdict.querySelector(".badge").textContent = matched ? "MATCH" : "NO MATCH";
+        verdict.querySelector(".what").textContent = "isISOMatch(…)  →  " + matched;
+        verdict.querySelector(".why").textContent = matched
+          ? ""
+          : "· " + explainFailure(value, opts);
+
+        const components = parseISOComponents(value, opts);
+        if (components) {
+          renderTable(componentsOut, [
+            ["year", components.year],
+            ["month", components.month],
+            ["day", components.day],
+            ["dayOfYear", components.dayOfYear],
+            ["weekYear", components.weekYear],
+            ["week", components.week],
+            ["isoDay", components.isoDay],
+            ["hours", components.hours],
+            ["minutes", components.minutes],
+            ["seconds", components.seconds],
+            ["offsetMinutes", components.offsetMinutes],
+            ["timestamp", components.timestamp],
+          ]);
+        } else {
+          componentsOut.innerHTML = '<span class="null">null — input rejected</span>';
+        }
+
+        const parsed = parseISOStrict(value, opts);
+        const parsedOk = parsed instanceof Date && !Number.isNaN(parsed.getTime());
+
+        let normalized;
+        try {
+          // normalizeISO throws (rather than returning a sentinel) on input
+          // that isn't strict ISO in the requested shape.
+          normalized = escapeHtml(normalizeISO(value, opts));
+        } catch (e) {
+          normalized = `<span class="err">${escapeHtml(e.constructor.name)}: ${escapeHtml(
+            e.message,
+          )}</span>`;
+        }
+
+        renderTable(parseOut, [
+          [
+            "parseISOStrict",
+            parsedOk ? parsed.toISOString() : "Invalid Date (never throws)",
+          ],
+          ["·  as epoch ms", parsedOk ? parsed.getTime() : null],
+        ]);
+        parseOut.innerHTML += `<table><tr><td class="k">normalizeISO</td><td class="v">${normalized}</td></tr></table>`;
+      }
+
+      isoInput.addEventListener("input", runStrict);
+      for (const el of Object.values(optEls)) el.addEventListener("change", runStrict);
+
+      const examplesBox = document.getElementById("iso-examples");
+      for (const ex of EXAMPLES) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = ex;
+        b.addEventListener("click", () => {
+          isoInput.value = ex;
+          // Bare dates/weeks/ordinals only make sense under a date-shaped
+          // representation; switch so the example demonstrates something.
+          if (!/[T:]/.test(ex)) optEls.representation.value = "date";
+          if (/^\d{4}-W/.test(ex)) optEls.dateRepresentation.value = "week";
+          else if (/^\d{4}-\d{3}$/.test(ex)) optEls.dateRepresentation.value = "ordinal";
+          runStrict();
+        });
+        examplesBox.appendChild(b);
+      }
+
+      // ---- arithmetic panel ----------------------------------------------
+      const arithDate = document.getElementById("arith-date");
+      const arithFn = document.getElementById("arith-fn");
+      const arithAmount = document.getElementById("arith-amount");
+      const arithOut = document.getElementById("arith-out");
+
+      const fmt = (d) =>
+        d instanceof Date && !Number.isNaN(d.getTime())
+          ? d.toString().replace(/\s*\(.*\)$/, "")
+          : "Invalid Date";
+
+      function runArith() {
+        const input = new Date(arithDate.value);
+        if (Number.isNaN(input.getTime())) {
+          arithOut.innerHTML = '<span class="err">Invalid Date — check the input string</span>';
+          return;
+        }
+        const fn = core[arithFn.value];
+        const result = fn(input, Number(arithAmount.value) || 0);
+        arithOut.innerHTML = `${escapeHtml(fmt(input))}<span class="arrow">→ ${escapeHtml(
+          arithFn.value,
+        )}(${escapeHtml(String(Number(arithAmount.value) || 0))}) →</span>${escapeHtml(
+          fmt(result),
+        )}`;
+      }
+
+      for (const el of [arithDate, arithFn, arithAmount])
+        el.addEventListener("input", runArith);
+
+      // ---- comparison panel ----------------------------------------------
+      const cmpA = document.getElementById("cmp-a");
+      const cmpB = document.getElementById("cmp-b");
+      const cmpOut = document.getElementById("cmp-out");
+
+      function runCmp() {
+        const a = new Date(cmpA.value);
+        const b = new Date(cmpB.value);
+        if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) {
+          cmpOut.innerHTML = '<span class="err">One of the dates is invalid</span>';
+          return;
+        }
+        renderTable(cmpOut, [
+          ["isBefore(A, B)", core.isBefore(a, b)],
+          ["isAfter(A, B)", core.isAfter(a, b)],
+          ["isEqual(A, B)", core.isEqual(a, b)],
+          ["compareAsc(A, B)", core.compareAsc(a, b)],
+          ["isSameDay(A, B)", core.isSameDay(a, b)],
+          ["isSameMonth(A, B)", core.isSameMonth(a, b)],
+          ["isSameYear(A, B)", core.isSameYear(a, b)],
+          ["differenceInCalendarDays(A, B)", core.differenceInCalendarDays(a, b)],
+        ]);
+      }
+
+      for (const el of [cmpA, cmpB]) el.addEventListener("input", runCmp);
+
+      runStrict();
+      runArith();
+      runCmp();
+    </script>
+  </body>
+</html>
