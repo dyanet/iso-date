@@ -5,7 +5,8 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "lcov", "html"],
+      // json-summary feeds scripts/coverage-badge.mjs.
+      reporter: ["text", "lcov", "html", "json-summary"],
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts"],
     },

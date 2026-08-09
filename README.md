@@ -1,6 +1,8 @@
 # @dyanet/iso-date
 
 [![CI](https://github.com/dyanet/iso-date/actions/workflows/ci.yml/badge.svg)](https://github.com/dyanet/iso-date/actions/workflows/ci.yml)
+[![Coverage](./.github/badges/coverage.svg)](https://github.com/dyanet/iso-date/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@dyanet/iso-date.svg)](https://www.npmjs.com/package/@dyanet/iso-date)
 [![GitHub Packages](https://img.shields.io/badge/GitHub%20Packages-%40dyanet%2Fiso--date-2a1f18)](https://github.com/dyanet/iso-date/pkgs/npm/iso-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
