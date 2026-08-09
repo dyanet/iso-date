@@ -1,8 +1,7 @@
 # @dyanet/iso-date
 
 [![CI](https://github.com/dyanet/iso-date/actions/workflows/ci.yml/badge.svg)](https://github.com/dyanet/iso-date/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@dyanet/iso-date.svg)](https://www.npmjs.com/package/@dyanet/iso-date)
-[![npm downloads](https://img.shields.io/npm/dm/@dyanet/iso-date.svg)](https://www.npmjs.com/package/@dyanet/iso-date)
+[![GitHub Packages](https://img.shields.io/badge/GitHub%20Packages-%40dyanet%2Fiso--date-2a1f18)](https://github.com/dyanet/iso-date/pkgs/npm/iso-date)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 Zero-dependency date utilities for TypeScript and JavaScript: everyday
@@ -104,9 +103,25 @@ are exercised in this package's own test suite.
 
 ## Installation
 
+Published to **GitHub Packages** (not npmjs.com). GitHub Packages requires
+authentication for every install, including public packages, so consumers
+need a `.npmrc` telling npm where the `@dyanet` scope lives:
+
+```
+@dyanet:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+where `GITHUB_TOKEN` is a personal access token with the `read:packages`
+scope. Then:
+
 ```bash
 npm install @dyanet/iso-date
 ```
+
+Inside GitHub Actions the token is already available — set
+`registry-url: https://npm.pkg.github.com` and `scope: '@dyanet'` on
+`actions/setup-node` and pass `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
 
 ## Quick Start — core (top-level import)
 
