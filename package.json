@@ -53,9 +53,9 @@
   },
   "homepage": "https://github.com/dyanet/iso-date#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=22.0.0"
