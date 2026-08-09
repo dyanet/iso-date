@@ -28,7 +28,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "build:site": "npm run build && node scripts/build-site.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "coverage:badge": "npm run test:coverage && node scripts/coverage-badge.mjs"
   },
   "keywords": [
     "iso8601",
