@@ -105,9 +105,17 @@ are exercised in this package's own test suite.
 
 ## Installation
 
-Published to **GitHub Packages** (not npmjs.com). GitHub Packages requires
-authentication for every install, including public packages, so consumers
-need a `.npmrc` telling npm where the `@dyanet` scope lives:
+```bash
+npm install @dyanet/iso-date
+```
+
+Published to **npmjs**, and mirrored to **GitHub Packages** — the same
+version goes to both from one release tag.
+
+npmjs is the one you want unless you have a specific reason otherwise: it
+needs no authentication. GitHub Packages requires an authenticated
+`.npmrc` for *every* install, including public packages. To use that
+mirror instead:
 
 ```
 @dyanet:registry=https://npm.pkg.github.com
@@ -115,13 +123,7 @@ need a `.npmrc` telling npm where the `@dyanet` scope lives:
 ```
 
 where `GITHUB_TOKEN` is a personal access token with the `read:packages`
-scope. Then:
-
-```bash
-npm install @dyanet/iso-date
-```
-
-Inside GitHub Actions the token is already available — set
+scope. Inside GitHub Actions that token already exists — set
 `registry-url: https://npm.pkg.github.com` and `scope: '@dyanet'` on
 `actions/setup-node` and pass `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`.
 

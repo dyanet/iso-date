@@ -212,7 +212,44 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Both publish steps below check first and skip if that exact version
+      # already exists on that registry.
+      #
+      # Without the check, re-running a tag is fatal rather than a no-op:
+      # force-updating the v0.1.0 tag retriggered this job and it died on
+      # "cannot publish over the previously published versions: 0.1.0". A
+      # release job should be safe to re-run -- the desired end state is
+      # "this version is on the registry", which is already true.
+      #
+      # It also means the two registries can drift apart (one succeeded, one
+      # didn't) and a re-run repairs only the one that's behind.
       - name: Publish to GitHub Packages
-        run: npm publish
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          if npm view "$NAME@$VERSION" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on GitHub Packages - skipping."
+          else
+            npm publish --registry=https://npm.pkg.github.com
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # npmjs needs a real token, which a fork or an unconfigured clone
+      # won't have. Skip with a notice rather than failing the release --
+      # GitHub Packages has already succeeded by this point.
+      - name: Publish to npmjs
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::notice::NPM_TOKEN is not set - skipping the npmjs publish."
+            exit 0
+          fi
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          if npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "::notice::$NAME@$VERSION is already on npmjs - skipping."
+          else
+            npm publish --registry=https://registry.npmjs.org --access public
+          fi
