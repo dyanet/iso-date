@@ -238,6 +238,13 @@ jobs:
       # npmjs needs a real token, which a fork or an unconfigured clone
       # won't have. Skip with a notice rather than failing the release --
       # GitHub Packages has already succeeded by this point.
+      #
+      # This writes its own npmrc instead of passing --registry. setup-node
+      # above put `@dyanet:registry=https://npm.pkg.github.com` in the
+      # default npmrc, and for a *scoped* package that mapping beats the
+      # --registry flag: the first attempt at this step sent the tarball to
+      # npm.pkg.github.com and died on a 401, while claiming to publish to
+      # npmjs. A dedicated userconfig has no scope mapping to lose to.
       - name: Publish to npmjs
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -246,10 +253,22 @@ jobs:
             echo "::notice::NPM_TOKEN is not set - skipping the npmjs publish."
             exit 0
           fi
+
+          NPMRC="$RUNNER_TEMP/.npmrc-npmjs"
+          umask 077
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "@dyanet:registry=https://registry.npmjs.org/"
+            echo "//registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN"
+          } > "$NPMRC"
+
           VERSION=$(node -p "require('./package.json').version")
           NAME=$(node -p "require('./package.json').name")
-          if npm view "$NAME@$VERSION" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+
+          if npm view "$NAME@$VERSION" version --userconfig "$NPMRC" >/dev/null 2>&1; then
             echo "::notice::$NAME@$VERSION is already on npmjs - skipping."
           else
-            npm publish --registry=https://registry.npmjs.org --access public
+            npm publish --userconfig "$NPMRC" --access public
           fi
+
+          rm -f "$NPMRC"
