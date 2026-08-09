@@ -72,6 +72,18 @@ specifically, just good practice while touching this file)
   default (started June 2, 2026) and fully removing the Node 20 runtime in
   September 2026 -- older major versions of these actions that still
   target Node 20 internally are close to breaking outright.
+- **`actions/upload-artifact` bumped v4 -> v7.** Missed on the first pass:
+  `checkout` and `setup-node` were bumped to v7 but `upload-artifact` was
+  left at v4, which still targets the Node 20 runtime. The very first CI
+  run on GitHub warned about exactly that ("Node.js 20 is deprecated...
+  being forced to run on Node.js 24"). Worth noting the general lesson --
+  auditing *some* of a workflow's action versions and stopping is how the
+  stragglers survive.
+- **`fail-fast: false` on the test matrix.** The default (`true`) cancels
+  every other matrix leg the moment one fails. On the first run, Node 26
+  failed and Node 24 was cancelled mid-run, so its actual result was
+  unknown -- which defeats the purpose of running a version matrix at all.
+  With it off, every line reports its own result.
 - **Node matrix limited to currently-supported LTS lines: 22, 24, 26.**
   Node 18 and 20 are EOL as of August 2026 (endoflife.date /
   nodejs.org release schedule) -- Node 22 is Maintenance LTS, Node 24 is
@@ -79,3 +91,31 @@ specifically, just good practice while touching this file)
   `engines.node` in `package.json` was raised to `>=22.0.0` to match:
   claiming support for EOL Node versions without CI proof isn't actually
   support.
+
+  Now verified rather than assumed, from the matrix itself: Node 22 and 24
+  have no native `Temporal` (the native-only test skips there); Node 26
+  does (it runs). The shim and native paths are therefore both genuinely
+  exercised on every push.
+
+## What the first real CI run caught
+
+Worth recording, because it's the case *for* running the matrix rather
+than trusting a local pass. Everything above was written before this repo
+had ever run on GitHub. The first run was red.
+
+`tests/core.temporalDetection.test.ts` asserted that `globalThis.Temporal`
+was `undefined` — a claim about the **host environment**, not about the
+code under test. That happened to hold on the Node 22 used locally, and
+was simply false on Node 26, which ships `Temporal`. Local runs were green
+the whole time; nothing but a real multi-version run could have surfaced
+it.
+
+The same teardown also called `delete globalThis.Temporal` unconditionally,
+which on Node 26 destroys the engine's real `Temporal` for anything running
+afterwards. Both are now fixed by saving and restoring the actual property
+descriptor, so each test *puts* the global into the state it needs instead
+of assuming it.
+
+The general shape of this bug — a test that encodes an environment
+assumption as an assertion — is worth watching for anywhere a matrix is
+introduced to a suite that previously ran on one version.

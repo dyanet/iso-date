@@ -81,6 +81,69 @@ jobs:
           name: coverage-report
           path: coverage/
 
+  # The demo site at https://iso-date-demo.dyanet.workers.dev, redeployed on
+  # every push to main that reaches it.
+  #
+  # Deploying on every push to main is correct *here*, and is not the pattern
+  # criticised below for `publish`. The difference is idempotence: re-uploading
+  # the same static assets under the same Worker name simply replaces them,
+  # whereas re-publishing an already-published npm version is rejected outright
+  # by the registry. The site should track main; a release should not. Don't
+  # "fix" this into tag-gating -- it would just leave the demo stale.
+  #
+  # `needs: test` for the same reason publish has it: nothing ships from a
+  # commit whose tests didn't pass.
+  deploy-demo:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Compiles src/ and assembles site-dist/ (index.html + the compiled
+      # library, unbundled -- see scripts/build-site.mjs).
+      - name: Build demo site
+        run: npm run build:site
+
+      # Forks, and this repo before the secrets were added, have no
+      # Cloudflare credentials. Skip with a visible notice rather than
+      # failing: "the demo didn't deploy" shouldn't render main red and
+      # train people to ignore a red main -- which is the same habit the
+      # publish-on-every-push problem created in dyanet/imap.
+      #
+      # The secrets context isn't available in a job-level `if`, so the
+      # check has to happen in a step.
+      - name: Check for Cloudflare credentials
+        id: cf
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set - skipping the demo deploy. See docs/cloudflare-demo.md."
+          fi
+
+      - name: Deploy to Cloudflare Workers
+        if: steps.cf.outputs.configured == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   # Publishing only runs off an explicit version tag (e.g. `v0.1.1`), never
   # off every push to main. dyanet/imap's CI publishes on every push to main
   # regardless of whether package.json's version changed, so once a version

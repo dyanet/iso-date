@@ -35,6 +35,12 @@ import { addMonths, isBefore } from "@dyanet/iso-date";        // core: everyday
 import { isISOMatch } from "@dyanet/iso-date/strict";           // strict: ISO 8601 validation
 ```
 
+**[Try it live →](https://iso-date-demo.dyanet.workers.dev)** — an interactive
+demo of both surfaces. It loads this package's own compiled output as plain ES
+modules with no bundler and no network calls, so it doubles as a working proof
+of the zero-dependency claim; it also reports whether your browser is running
+the native `Temporal` path or the internal shim.
+
 ## Background
 
 JavaScript's native `Date.parse` and libraries like `date-fns`'s `parseISO`

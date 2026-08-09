@@ -1,0 +1,24 @@
+{
+  // Static demo site for @dyanet/iso-date.
+  //
+  // Deployed as a Worker with static assets rather than a Pages project:
+  // Cloudflare's current guidance points new static/full-stack projects at
+  // Workers (there is a one-way "Migrate from Pages to Workers" guide, and
+  // Workers Sites is deprecated in favour of Workers Assets), so Pages would
+  // be starting on the deprecated side of a migration.
+  //
+  // There is no `main` field: this is assets-only, so requests are served
+  // straight from the asset store with no Worker script to invoke and no
+  // per-request billing.
+  "name": "iso-date-demo",
+  "compatibility_date": "2026-08-08",
+  "assets": {
+    "directory": "./site-dist",
+    // Single page, no client-side router -- anything unmatched should be a
+    // genuine 404 rather than silently serving index.html.
+    "not_found_handling": "none"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
