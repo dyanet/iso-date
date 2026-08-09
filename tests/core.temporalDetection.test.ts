@@ -1,20 +1,44 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getPlainDate, getShimPlainDate } from "../src/temporal/detect.js";
 import { ShimPlainDate } from "../src/temporal/shim.js";
 
-// Node 18/20/22/24 (this CI matrix) have no native `Temporal`, so
-// `getPlainDate()` naturally exercises the shim path in every other test
-// file. This file stubs `globalThis.Temporal` to prove the *other* branch
-// of the detection logic -- picking up a native-shaped implementation when
-// one is present -- actually works, without needing to run on Node 26.
+// Whether `globalThis.Temporal` exists depends on which Node line is running
+// this file: 26 ships it natively, 22 doesn't. So neither branch of the
+// detection logic can be reached by *assuming* what `globalThis` looks like
+// -- an earlier version of this file asserted `Temporal` was undefined, which
+// held on Node 22 and failed outright on Node 26. Each test below instead
+// puts `globalThis.Temporal` into the state it wants and restores the real
+// descriptor afterwards, so both branches get exercised on every Node version
+// in the matrix, native `Temporal` or not.
+
+type TemporalGlobal = { Temporal?: unknown };
+
+const globalWithTemporal = globalThis as TemporalGlobal;
+
+// Sampled at module load, before any hook below has had a chance to swap the
+// global out from under it.
+const hasNativeTemporal =
+  typeof globalWithTemporal.Temporal === "object" && globalWithTemporal.Temporal !== null;
 
 describe("getPlainDate() feature detection", () => {
+  let originalDescriptor: PropertyDescriptor | undefined;
+
+  beforeEach(() => {
+    originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "Temporal");
+  });
+
   afterEach(() => {
-    delete (globalThis as { Temporal?: unknown }).Temporal;
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, "Temporal", originalDescriptor);
+    } else {
+      delete globalWithTemporal.Temporal;
+    }
   });
 
   it("falls back to the shim when globalThis.Temporal is absent", () => {
-    expect((globalThis as { Temporal?: unknown }).Temporal).toBeUndefined();
+    delete globalWithTemporal.Temporal;
+
+    expect(globalWithTemporal.Temporal).toBeUndefined();
     expect(getPlainDate()).toBe(ShimPlainDate);
   });
 
@@ -45,7 +69,7 @@ describe("getPlainDate() feature detection", () => {
       }
     }
 
-    (globalThis as { Temporal?: unknown }).Temporal = { PlainDate: FakeNativePlainDate };
+    globalWithTemporal.Temporal = { PlainDate: FakeNativePlainDate };
 
     const resolved = getPlainDate();
     expect(resolved).toBe(FakeNativePlainDate);
@@ -53,7 +77,22 @@ describe("getPlainDate() feature detection", () => {
   });
 
   it("getShimPlainDate() always returns the shim, even when native Temporal is stubbed in", () => {
-    (globalThis as { Temporal?: unknown }).Temporal = { PlainDate: class {} };
+    globalWithTemporal.Temporal = { PlainDate: class {} };
     expect(getShimPlainDate()).toBe(ShimPlainDate);
   });
+
+  // The stub above proves the *branch* works; this proves the branch picks up
+  // a real engine-provided `Temporal.PlainDate` when there is one. Runs only
+  // on Node lines that actually ship it (26+), which is what that entry in
+  // the CI matrix is there to cover -- faking it here would test nothing the
+  // stub case doesn't already.
+  it.runIf(hasNativeTemporal)(
+    "resolves to the engine's own Temporal.PlainDate on a native-Temporal runtime",
+    () => {
+      const native = (globalWithTemporal.Temporal as { PlainDate: unknown }).PlainDate;
+
+      expect(getPlainDate()).toBe(native);
+      expect(getPlainDate()).not.toBe(ShimPlainDate);
+    },
+  );
 });

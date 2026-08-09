@@ -43,8 +43,8 @@ export function getPlainDate(): PlainDateConstructor {
 
 /**
  * Always the shim, regardless of what's on `globalThis`. Exported so tests
- * can verify the shim's behavior matches native `Temporal` even when both
- * are available in the same test run -- see `tests/core.temporalParity.test.ts`.
+ * can reach the shim even when native `Temporal` is present (or stubbed) in
+ * the same run -- see `tests/core.temporalDetection.test.ts`.
  */
 export function getShimPlainDate(): PlainDateConstructor {
   return ShimPlainDate;
