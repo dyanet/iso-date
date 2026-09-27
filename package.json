@@ -1,6 +1,6 @@
 {
   "name": "@dyanet/iso-date",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zero-dependency date utilities for TypeScript/JavaScript: everyday arithmetic/comparison (Temporal-backed) plus a strict ISO 8601 validation/parsing family",
   "type": "module",
   "main": "dist/index.js",
@@ -51,9 +51,9 @@
   },
   "homepage": "https://github.com/dyanet/iso-date#readme",
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^5.0.2",
     "typescript": "^5.6.0",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.2"
   },
   "engines": {
     "node": ">=22.0.0"
