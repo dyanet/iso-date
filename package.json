@@ -52,7 +52,7 @@
   "homepage": "https://github.com/dyanet/iso-date#readme",
   "devDependencies": {
     "@vitest/coverage-v8": "^5.0.2",
-    "typescript": "^5.6.0",
+    "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   },
   "engines": {
